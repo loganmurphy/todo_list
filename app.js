@@ -27,7 +27,15 @@ console.log(authConfig.web.client_id);
 //   and deserialize users out of the session. Typically, this is as simple as
 //   storing the user ID when serializing, and finding the user by ID when
 //   deserializing.
+passport.serializeUser(function(user, done) {
+  // done(null, user.id);
+  done(null, user);
+});
 
+passport.deserializeUser(function(obj, done) {
+  // Users.findById(obj, done);
+  done(null, obj);
+});
 
 // Use the GoogleStrategy within Passport.
 //   Strategies in Passport require a `verify` function, which accept
@@ -52,6 +60,7 @@ passport.use(new GoogleStrategy({
     clientSecret: authConfig.web.client_secret,
     // callbackURL: "http://localhost:8080/auth/google/callback"
     callbackURL: "https://todolist.logancodes.com/auth/google/callback"
+
   },
 
   // Use the API access settings stored in ./config/auth.json. You must create
