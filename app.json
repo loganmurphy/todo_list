@@ -1,0 +1,12 @@
+{
+  "name": "todolist",
+  "repository": "https://github.com/loganmurphy/todo_list.git",
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-nodejs"
+    }
+  ],
+  "env": {
+    "NPM_CONFIG_PRODUCTION": false
+  }
+}
