@@ -15,9 +15,9 @@ var pgp = require('pg-promise')({});
 var app = express();
 var db = pgp({database: 'todolist'});
 
-var authorizationURL = "https://accounts.google.com/o/oauth2/auth";
-var clientID = authConfig.web.client_id;
-console.log(authConfig.web.client_id);
+// var authorizationURL = "https://accounts.google.com/o/oauth2/auth";
+// var clientID = authConfig.web.client_id;
+// console.log(authConfig.web.client_id);
 
 
 
