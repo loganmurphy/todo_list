@@ -134,6 +134,7 @@ app.get('/auth/google/callback',
 
 app.get('/todos', ensureAuthenticated, function(request, response){
   var user_id = request.user.id
+  var user_name = request.user.name
 
   // console.log('cookies, get your cookies', request.sessionStore.sessions);
   db.todo.findAll({where: {user_id: user_id, done: 'false'}})
@@ -142,7 +143,7 @@ app.get('/todos', ensureAuthenticated, function(request, response){
     results.forEach(function(r){
       uncomplete_todos.push(r);
     })
-    var context = {title: 'Here are your todos ' , username: '', todos: uncomplete_todos};
+    var context = {title: 'Hello ' , username: user_name, todos: uncomplete_todos};
     response.render('todos.hbs', context);
   });
 });
