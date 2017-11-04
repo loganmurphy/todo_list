@@ -14,8 +14,8 @@ module.exports = {
       done: {
         type: Sequelize.BOOLEAN
       },
-      user_data: {
-        type: Sequelize.JSON
+      user_id: {
+        type: Sequelize.STRING
       },
       createdAt: {
         allowNull: false,

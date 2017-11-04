@@ -11,9 +11,13 @@ var passport = require('passport');
 //
 
 var express = require('express');
-var pgp = require('pg-promise')({});
+// var pgp = require('pg-promise')({});
 var app = express();
-var db = pgp({database: 'todolist'});
+// local db
+// var db = pgp({database: 'todolist'});
+// for production
+var db = require('./models');
+
 
 var authorizationURL = "https://accounts.google.com/o/oauth2/auth";
 var clientID = authConfig.web.client_id;
@@ -60,26 +64,19 @@ passport.use(new GoogleStrategy({
     clientSecret: authConfig.web.client_secret,
     // callbackURL: "http://localhost:8080/auth/google/callback"
     callbackURL: "https://todolist.logancodes.com/auth/google/callback"
-
   },
-
-  // Use the API access settings stored in ./config/auth.json. You must create
-  // an OAuth 2 client ID and secret at: https://console.developers.google.com
-  // authConfig.google,
-
   function(accessToken, refreshToken, profile, cb){
-
     // Typically you would query the database to find the user record
     // associated with this Google profile, then pass that object to the `done`
     // callback.
+    console.log(profile);
     var user = extractProfile(profile);
     // store profile in db
+    db.users.create({
+      name: profile.name['givenName'], user_id: profile.id})
     return cb(null, user);
-
   }))
 
-
-// cookie stuff
 var logger = require('morgan');
 var session = require('express-session');
 
@@ -99,12 +96,25 @@ const body_parser = require('body-parser');
 app.use(body_parser.urlencoded({extended: false}));
 app.set('view engine', 'hbs');
 
+// app.use(ensureAuthenticated (request, response, next) {
+//   if (request.session.user) {
+//     next();
+//   } else if (request.path == '/login') {
+//     next();
+//   } else {
+//     response.redirect('/login');
+//   }
+// });
+// Simple route middleware to ensure user is authenticated.
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect('/');
+}
+
+
 var todos = []
-
-
-
-// Application routes
-
 
 app.get('/', function(req, res) {
   res.render('login', {
@@ -134,22 +144,14 @@ app.get('/auth/google/callback',
     res.redirect('/todos');
   });
 
-app.get('/account', ensureAuthenticated, function(req, res) {
-  res.render('account', {
-    user: req.user
-  });
-});
-
-
 // my stuff
 app.get('/todos', function(request, response){
-  var uncomplete_todos = [];
-  db.query('SELECT * FROM task WHERE done = false')
+  db.todo.findAll({where: {done: 'false'}})
   .then(function (results) {
-    results.forEach(function (r) {
-      // console.log(r.description)
+    var uncomplete_todos = [];
+    results.forEach(function(r){
       uncomplete_todos.push(r);
-    });
+    })
     var context = {title: 'Here are your todos ' , username: '', todos: uncomplete_todos};
     response.render('todos.hbs', context);
   });
@@ -157,9 +159,9 @@ app.get('/todos', function(request, response){
 
 app.post('/todos/add', function(request, response){
   var new_task = request.body.name
-  db.result("INSERT INTO task VALUES (default, $1, false)", new_task)
+  db.todo.create({
+    description: new_task, done: 'false', user_id: 106558481740185611544})
   .then(function (result) {
-    // console.log(result);
     todos.push(request.body.name);
     response.redirect('/todos');
   });
@@ -167,20 +169,14 @@ app.post('/todos/add', function(request, response){
 
 app.post('/todos/done/:id', function(request, response){
   var mark_complete = request.params.id;
-  var p = db.result("UPDATE task SET done = true WHERE id = $1", mark_complete)
+  db.todo.update({done: 'true'}, {where: {id: mark_complete}})
   .then(function (result) {
     console.log(result)
+    result.done = 'true';
     response.redirect('/todos')
   })
 })
 
-// Simple route middleware to ensure user is authenticated.
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.redirect('/');
-}
 
 var PORT = process.env.PORT || 8080;
 app.listen(PORT, function () {

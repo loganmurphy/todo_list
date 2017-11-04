@@ -54,6 +54,12 @@ li {
     height: red;
 }
 
+#login_button {
+  margin-top: 15%;
+  height: 3rem;
+  z-index: 1;
+}
+
 form {
   width: 100%;
 }
