@@ -14,8 +14,8 @@ module.exports = {
       user_id: {
         type: Sequelize.STRING
       },
-      cookie: {
-        type: Sequelize.JSON
+      token: {
+        type: Sequelize.STRING
       },
       createdAt: {
         allowNull: false,

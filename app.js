@@ -8,7 +8,6 @@
 var authConfig = require('./config/auth');
 var GoogleStrategy = require('passport-google-oauth').OAuth2Strategy;
 var passport = require('passport');
-//
 
 var express = require('express');
 // var pgp = require('pg-promise')({});
@@ -17,11 +16,13 @@ var app = express();
 // var db = pgp({database: 'todolist'});
 // for production
 var db = require('./models');
-
+// This is for logging
+var logger = require('morgan');
+var session = require('express-session');
 
 var authorizationURL = "https://accounts.google.com/o/oauth2/auth";
 var clientID = authConfig.web.client_id;
-console.log(authConfig.web.client_id);
+// console.log(authConfig.web.client_id);
 
 
 //
@@ -31,15 +32,7 @@ console.log(authConfig.web.client_id);
 //   and deserialize users out of the session. Typically, this is as simple as
 //   storing the user ID when serializing, and finding the user by ID when
 //   deserializing.
-passport.serializeUser(function(user, done) {
-  // done(null, user.id);
-  done(null, user);
-});
 
-passport.deserializeUser(function(obj, done) {
-  // Users.findById(obj, done);
-  done(null, obj);
-});
 
 // Use the GoogleStrategy within Passport.
 //   Strategies in Passport require a `verify` function, which accept
@@ -47,6 +40,7 @@ passport.deserializeUser(function(obj, done) {
 //   profile), and invoke a callback with a user object.
 //   See http://passportjs.org/docs/configure#verify-callback
 
+// returns info from the profile
 function extractProfile (profile) {
   let imageUrl = '';
   if (profile.photos && profile.photos.length) {
@@ -59,33 +53,52 @@ function extractProfile (profile) {
   };
 }
 
+// Checks authentication
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect('/');
+}
+
+
+// Noth sure what the serializeUser and deserializer do, something about the session
+passport.serializeUser(function(user, done) {
+  // done(null, user.id);
+  done(null, user);
+});
+// see above
+passport.deserializeUser(function(obj, done) {
+  // Users.findById(obj, done);
+  done(null, obj);
+});
+
 passport.use(new GoogleStrategy({
     clientID: clientID,
     clientSecret: authConfig.web.client_secret,
-    // callbackURL: "http://localhost:8080/auth/google/callback"
-    callbackURL: "https://todolist.logancodes.com/auth/google/callback"
+    callbackURL: "http://localhost:8080/auth/google/callback"
+    // callbackURL: "https://todolist.logancodes.com/auth/google/callback"
   },
   function(accessToken, refreshToken, profile, cb){
-    // Typically you would query the database to find the user record
-    // associated with this Google profile, then pass that object to the `done`
-    // callback.
-    console.log(profile);
+    // console.log(profile);
+    // console.log(accessToken)
+    var token = accessToken
     var user = extractProfile(profile);
-    // store profile in db
-    db.users.create({
-      name: profile.name['givenName'], user_id: profile.id})
-    return cb(null, user);
+    // store profile in db, or fetch it if a record exists
+    db.users.findOrCreate(
+      {where: {name:profile.name.givenName, user_id: profile.id}, attributes: {name: profile.name.givenName, user_id: profile.id}})
+      .then(function(results){
+        return cb(null, user)
+      })
   }))
-
-var logger = require('morgan');
-var session = require('express-session');
 
 app.use(logger('dev'));
 //app.use(cookieParser());
 app.use(session({
   secret: 'keyboard cat',
-  resave: false,
-  saveUninitialized: false
+  resave: true,
+  saveUninitialized: false,
+  cookie: {maxAge: 3600000},
 }));
 // middleware for authentication verification
 app.use(passport.initialize());
@@ -96,45 +109,20 @@ const body_parser = require('body-parser');
 app.use(body_parser.urlencoded({extended: false}));
 app.set('view engine', 'hbs');
 
-// app.use(ensureAuthenticated (request, response, next) {
-//   if (request.session.user) {
-//     next();
-//   } else if (request.path == '/login') {
-//     next();
-//   } else {
-//     response.redirect('/login');
-//   }
-// });
 // Simple route middleware to ensure user is authenticated.
-function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.redirect('/');
-}
-
-
-var todos = []
-
 app.get('/', function(req, res) {
   res.render('login', {
     user: req.user
   });
 });
 
-// GET /auth/google
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  The first step in Google authentication will involve
-//   redirecting the user to google.com.  After authorization, Google
-//   will redirect the user back to this application at /auth/google/callback
+// Use passport.authenticate()  to authenticate the. The user is redirected to google.com.
+// After authorization, Google redirects the user back to this application at /auth/google/callback
 app.get('/auth',
   passport.authenticate('google', { scope: ['openid email profile'] }));
 
-// GET /auth/google/callback
-//   Use passport.authenticate() as route middleware to authenticate the
-//   request.  If authentication fails, the user will be redirected back to the
-//   login page.  Otherwise, the primary route function function will be called,
-//   which, in this example, will redirect the user to the home page.
+// Use passport.authenticate() to authenticate. If authentication fails, the user will be
+// redirected back to thelogin page.  Otherwise, user is redirected to their todos page
 app.get('/auth/google/callback',
   passport.authenticate('google', {
     failureRedirect: '/login'
@@ -144,9 +132,11 @@ app.get('/auth/google/callback',
     res.redirect('/todos');
   });
 
-// my stuff
-app.get('/todos', function(request, response){
-  db.todo.findAll({where: {done: 'false'}})
+app.get('/todos', ensureAuthenticated, function(request, response){
+  var user_id = request.user.id
+
+  // console.log('cookies, get your cookies', request.sessionStore.sessions);
+  db.todo.findAll({where: {user_id: user_id, done: 'false'}})
   .then(function (results) {
     var uncomplete_todos = [];
     results.forEach(function(r){
@@ -157,17 +147,18 @@ app.get('/todos', function(request, response){
   });
 });
 
-app.post('/todos/add', function(request, response){
+app.post('/todos/add', ensureAuthenticated, function(request, response){
   var new_task = request.body.name
+  var user_id = request.user.id
   db.todo.create({
-    description: new_task, done: 'false', user_id: 106558481740185611544})
+    description: new_task, done: 'false', user_id: user_id})
   .then(function (result) {
     todos.push(request.body.name);
     response.redirect('/todos');
   });
 })
 
-app.post('/todos/done/:id', function(request, response){
+app.post('/todos/done/:id', ensureAuthenticated, function(request, response){
   var mark_complete = request.params.id;
   db.todo.update({done: 'true'}, {where: {id: mark_complete}})
   .then(function (result) {
@@ -176,7 +167,6 @@ app.post('/todos/done/:id', function(request, response){
     response.redirect('/todos')
   })
 })
-
 
 var PORT = process.env.PORT || 8080;
 app.listen(PORT, function () {
