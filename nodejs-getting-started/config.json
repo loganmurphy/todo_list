@@ -1,4 +1,0 @@
-"OAUTH2_CLIENT_ID": "1077705632035-27q36q1uu32c2911fp71mi4ep9unuobo.apps.googleusercontent.com",
-"OAUTH2_CLIENT_SECRET": "yOTDZnzB_oWG_gpI7K8QHAnC",
-"OAUTH2_CALLBACK": "http://localhost:8080/auth/google/callback",
-"MEMCACHE_URL": "memcached-12764.c17.us-east-1-4.ec2.cloud.redislabs.com:12764"

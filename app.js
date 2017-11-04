@@ -73,6 +73,7 @@ passport.use(new GoogleStrategy({
     // associated with this Google profile, then pass that object to the `done`
     // callback.
     var user = extractProfile(profile);
+    // store profile in db
     return cb(null, user);
 
   }))
