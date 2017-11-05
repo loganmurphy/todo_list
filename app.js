@@ -76,8 +76,8 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GoogleStrategy({
     clientID: clientID,
     clientSecret: authConfig.web.client_secret,
-    // callbackURL: "http://localhost:8080/auth/google/callback"
-    callbackURL: "https://todolist.logancodes.com/auth/google/callback"
+    callbackURL: "http://localhost:8080/auth/google/callback"
+    // callbackURL: "https://todolist.logancodes.com/auth/google/callback"
   },
   function(accessToken, refreshToken, profile, cb){
     // console.log(profile);
@@ -134,16 +134,15 @@ app.get('/auth/google/callback',
 
 app.get('/todos', ensureAuthenticated, function(request, response){
   var user_id = request.user.id
-  var user_name = request.user.name
-
+  var name = request.user.name
   // console.log('cookies, get your cookies', request.sessionStore.sessions);
   db.todo.findAll({where: {user_id: user_id, done: 'false'}})
-  .then(function (results) {
+  .then(function (results){
     var uncomplete_todos = [];
     results.forEach(function(r){
       uncomplete_todos.push(r);
     })
-    var context = {title: 'Hello ' , username: user_name, todos: uncomplete_todos};
+    var context = {title: 'Hello! ', name: name, todos: uncomplete_todos};
     response.render('todos.hbs', context);
   });
 });
@@ -154,10 +153,9 @@ app.post('/todos/add', ensureAuthenticated, function(request, response){
   db.todo.create({
     description: new_task, done: 'false', user_id: user_id})
   .then(function (result) {
-    todos.push(request.body.name);
     response.redirect('/todos');
   });
-})
+});
 
 app.post('/todos/done/:id', ensureAuthenticated, function(request, response){
   var mark_complete = request.params.id;
