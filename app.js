@@ -76,8 +76,8 @@ passport.deserializeUser(function(obj, done) {
 passport.use(new GoogleStrategy({
     clientID: clientID,
     clientSecret: authConfig.web.client_secret,
-    // callbackURL: "http://localhost:8080/auth/google/callback"
-    callbackURL: "https://todolist.logancodes.com/auth/google/callback"
+    callbackURL: "http://localhost:8080/auth/google/callback"
+    // callbackURL: "https://todolist.logancodes.com/auth/google/callback"
   },
   function(accessToken, refreshToken, profile, cb){
     // console.log(profile);
